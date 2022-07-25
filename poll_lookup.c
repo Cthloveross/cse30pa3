@@ -111,7 +111,31 @@ unsigned long hash(char *str) {
 node *add_node(node *front, int year, int month, int day, int hour, int pm25,
     int temp) {
   // TODO: Implement add_node
-  return NULL;
+   node *newNode = malloc(sizeof(node));
+          newNode->year = year;
+          newNode->month = month;
+          newNode->day = day;
+          newNode->hour = hour;
+          newNode->pm25 = pm25;
+          newNode->temp = temp;
+          newNode -> next = NULL;
+          return newNode;
+        if( newNode == NULL){
+                return NULL;
+        }
+
+        if(front == NULL){
+                front = newNode;
+                return newNode;
+        }
+        else{
+                node *lastNode = front;
+                while(lastNode->next != NULL){
+                        lastNode = lastNode->next;
+                }
+                lastNode->next = newNode;
+                return front;
+        }
 }
 
 /*
@@ -123,12 +147,57 @@ node *add_node(node *front, int year, int month, int day, int hour, int pm25,
  */
 void print_date_stats(node **table, unsigned long size, char *datestr) {
   // TODO: Implement print_data_stats
-  // Use the following formatting strings to print messages.
-  printf("Unable to find any data for the date %s.\n", /* TODO */);
-  printf("Minimum pm2.5: %d\tMaximum pm2.5: %d\tAverage pm2.5: %d\n",
-         /* TODO */, /* TODO */, /* TODO */);
-  printf("Minimum temp: %d\tMaximum temp: %d\tAverage temp: %d\n",
-         /* TODO */, /* TODO */, /* TODO */);
+  int hashvalue = hash(datestr)%size;
+          node *front = table[hashvalue];
+          int count = 0;
+          int mininumpm = INT_MAX;
+          int mininumtemp = INT_MAX;
+          int maximumpm = INT_MIN;
+          int maximumtemp = INT_MIN;
+          int averagepm = 0;
+          int averagetemp = 0;
+          int number = 0;
+          char delim[] = "-";
+          char *token = strtok(datestr, delim);
+         int yearcount = atoi(token);
+          token = strtok(datestr,delim);
+         int  monthcount =atoi( token);
+          token = strtok(datestr, delim);
+          int daycount = atoi(token);
+         while(front != NULL){
+                 if(front->year == yearcount && front->month == monthcount && front->day == daycount){
+                         number++;
+                         averagepm += front->pm25;
+                         averagetemp += front->temp;
+                         if(front->pm25 < mininumpm){
+                                 mininumpm = front->pm25;
+                         }
+                         if(front->pm25 > maximumpm){
+                                 maximumpm = front->pm25;
+                            }
+                         if(front->temp < mininumtemp){
+                                 mininumtemp =  front->temp;
+                         }
+                         if(front->temp > maximumtemp){
+                                 maximumtemp = front->temp;
+                         }
+                         front = front->next;
+                 }
+                else{
+                        front = front->next;
+                }
+         }
+                 if(number == 0){
+                 printf("Unable to find any data for the date %s.\n", datestr);
+                 }
+                 else{
+                         averagepm = averagepm/number;
+                         averagetemp = averagetemp/number;
+        printf("Minimum pm2.5: %d\tMaximum pm2.5: %d\tAverage pm2.5: %d\n",
+         mininumpm, maximumpm, averagepm);
+        printf("Minimum temp: %d\tMaximum temp: %d\tAverage temp: %d\n",
+         mininumtemp, maximumtemp,averagetemp);
+                 }
 }
 
 /*
@@ -138,7 +207,99 @@ void print_date_stats(node **table, unsigned long size, char *datestr) {
  * Arguments: pointer to hash table, hash table size, file name
  */
 int load_table(node **table, unsigned long size, char *filename) {
-  // TODO: Implement load_table
+    FILE* fp;
+        char *buf;
+        int count = 0;
+        const char split[] = "-";
+        int cols[COL_TEMP+1];
+        int c = 0;
+        int year;
+        int  month;
+        int day;
+        int hour;
+        int pm25;
+        int temp;
+        int nothing = "NA";
+        int *not = nothing;
+       if(!( buf = malloc(sizeof(char*) * LINE_SIZE-1))){
+        perror("load_table filename open");
+        return 1;
+       }
+       else{
+            buf = malloc(sizeof(char*)*LINE_SIZE-1);
+        }
+           fp = fopen(filename, "r");
+           if(fp == NULL){
+                   perror("load_table filename open");
+                   return 1;
+           }
+           while(fp != NULL){
+           fgets(buf, LINE_SIZE-1, fp);
+           char *token = strtok(buf, split);
+              if(token == "NA"){
+                   year = 0;
+           }
+           else{
+                   year = atoi(token);
+           }
+           token = strtok(NULL, split);
+           if(token == "NA"){
+                   month = 0;
+           }
+           else{
+                   month = atoi(token);
+           }
+           token = strtok(NULL,split);
+        if(token == "NA"){
+                day = 0;
+        }
+        else{
+                day = atoi(token);
+        }
+        token = strtok(NULL,split);
+         if(token == "NA"){
+                hour = 0;
+         }
+        else{
+                hour = atoi(token);
+        }
+        token = strtok(NULL,split);
+        if(token == "NA"){
+                pm25 = 0;
+        }
+        else{
+                pm25 = atoi(token);
+        }
+        token = strtok(NULL, split);
+        if(token == "NA"){
+                temp = 0;
+        }
+        else{
+                temp = atoi(token);
+        }
+              char datestring[11];
+        strcpy(datestring, (char*)year);
+        strcpy(datestring, split);
+        strcpy(datestring, (char*)month);
+        strcpy(datestring, split);
+        strcpy(datestring, (char*)day);
+        strcpy(datestring, "\0");
+
+
+        unsigned long hashval = hash(datestring)%size;
+        node *front = table[hashval];
+        if(node_lookup(front, year, month, day, hour)==NULL){
+                fprintf(stderr, "load_table duplicate entry: %d-%d-%d %d\n",year,month,day,hour);
+
+        }
+        else{
+                if(add_node(front,year,month,day,hour,pm25,temp)==NULL){
+                        fprintf(stderr,"load_table could not add %s\n",datestring);
+                }
+                add_node(front,year,month,day,hour,pm25,temp);
+                }
+        }
+               fclose(fp);
   return 0;
 }
 
@@ -148,12 +309,40 @@ int load_table(node **table, unsigned long size, char *filename) {
  * Arguments: pointer to a hash table, number of elements
  */
 void print_info(node **table, unsigned long size) {
-  // TODO: Implement print_info
-  printf("Table size: %lu\n", /* TODO */);
-  printf("Total entries: %lu\n", /* TODO */);
-  printf("Longest chain: %lu\n", /* TODO */);
-  printf("Shortest chain: %lu\n", /* TODO */);
-  printf("Empty buckets: %lu\n", /* TODO */);
+  long unsigned int totalentries;
+  long unsigned int chain[size];
+  long unsigned int emptynumber = 0;
+  long unsigned int count;
+  long unsigned int longestchain = -1;
+  long unsigned int shortestchain = INT_MAX;
+  node *cur;
+  for(long unsigned int i = 0; i< size; i++){
+          count = 0;
+          cur = table[i];
+          if(cur == NULL){
+                  emptynumber++;
+          }
+          while(cur != NULL){
+                  cur = cur->next;
+                  count++;
+                  totalentries++;
+          }
+          chain[i] = count;
+  }
+
+  for(long unsigned int i = 0; i<size;i++){
+          if(chain[i] > longestchain){
+                  longestchain = chain[i];
+          }
+          if(chain[i] < shortestchain){
+                  shortestchain = chain[i];
+          }
+  }
+  printf("Table size: %lu\n", size);
+  printf("Total entries: %lu\n", totalentries);
+  printf("Longest chain: %lu\n", longestchain);
+  printf("Shortest chain: %lu\n", shortestchain);
+  printf("Empty buckets: %lu\n", emptynumber);
 }
 
 /*
